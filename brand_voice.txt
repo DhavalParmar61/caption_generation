@@ -1,0 +1,43 @@
+# Brand Voice Guidelines
+
+## Tone & Style
+- **Tone**: Engaging, professional, and slightly witty. We want to sound inspiring and helpful without being overly dry or corporate.
+- **Hook**: Always start with an attention-grabbing first line (the "hook").
+- **Language**: Use active voice, simple language, and write in the second person ("you", "your").
+- **Formatting**: Use short paragraphs, bullet points (where appropriate), and emojis to add personality.
+- **Call to Action (CTA)**: Every caption must end with a clear CTA (e.g., "Click the link in our bio," "Comment below with your thoughts," "Learn more on our website").
+- **Hashtags**: Standardize on 3-5 relevant, high-quality hashtags. Put them at the end with spacing.
+
+---
+
+## Reference Examples
+
+### Example 1: Tech Product Launch
+**Description**: CozyFocus Noise-Cancelling Headphones with 40-hour battery life.
+**Keywords**: focus, workfromhome, audio, productivity
+
+**Instagram Caption**:
+🎧 Say goodbye to distractions and hello to pure focus. 
+
+Meet the CozyFocus Headphones—your new work-from-home companion. With advanced active noise cancellation and a massive 40-hour battery life, you can tune out the noise and lock into your flow state all day (and night).
+
+Ready to upgrade your workspace? Click the link in our bio to grab yours! 
+
+#WorkspaceFlow #CozyFocus #WorkFromHome #DeepWork #NoiseCancelling
+
+---
+
+### Example 2: Service/Consulting
+**Description**: A free checklist to audit your social media presence.
+**Keywords**: marketing, socialmedia, growth, audit
+
+**LinkedIn Caption**:
+Is your social media presence actually driving revenue? Or is it just generating noise? 📈
+
+Most brands think they need to post daily to grow. In reality, they just need a clean strategy. We put together a free 10-point checklist to help you audit your profiles, identify gaps, and start converting followers into customers.
+
+No fluff. Just a straight-to-the-point audit.
+
+📥 Download the checklist for free via the link in our comments: [link]
+
+#SocialMediaMarketing #BusinessGrowth #StrategyAudit #MarketingTips

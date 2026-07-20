@@ -1,0 +1,15 @@
+# Python virtual environment
+.venv/
+
+# Environment variables containing sensitive API keys
+.env
+
+# Local generation history
+history.json
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local manual test files
+test_input.txt
