@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaptionGen Pro 🚀 - AI Social Media Caption Generator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Boxicons for modern icons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar: Configuration & Settings -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="bx bxs-rocket logo-icon"></i>
+                    <span>CaptionGen <span class="accent-text">Pro</span></span>
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- LLM Provider Settings Card -->
+                <div class="settings-group">
+                    <h3><i class="bx bx-cog"></i> Engine Settings</h3>
+                    
+                    <div class="form-control">
+                        <label for="provider-select">LLM Provider</label>
+                        <select id="provider-select">
+                            <option value="gemini">Google Gemini</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label for="model-select">Model Override</label>
+                        <select id="model-select">
+                            <!-- Dynamic options populated by app.js -->
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label for="temp-slider">Creativity (Temp): <span id="temp-val">0.7</span></label>
+                        <input type="range" id="temp-slider" min="0.0" max="1.0" step="0.1" value="0.7">
+                    </div>
+                </div>
+
+                <!-- API Key Status Badge list -->
+                <div class="settings-group">
+                    <h3><i class="bx bx-key"></i> Key Status</h3>
+                    <div class="status-list">
+                        <div class="status-item" id="status-gemini">
+                            <span class="status-label">Gemini API</span>
+                            <span class="status-indicator pending"><i class="bx bx-minus-circle"></i> Checking</span>
+                        </div>
+                        <div class="status-item" id="status-openai">
+                            <span class="status-label">OpenAI API</span>
+                            <span class="status-indicator pending"><i class="bx bx-minus-circle"></i> Checking</span>
+                        </div>
+                        <div class="status-item" id="status-anthropic">
+                            <span class="status-label">Anthropic API</span>
+                            <span class="status-indicator pending"><i class="bx bx-minus-circle"></i> Checking</span>
+                        </div>
+                    </div>
+                    <p class="status-tip">Configure these keys in your local <code>.env</code> file.</p>
+                </div>
+
+                <!-- Brand Voice Editor Card -->
+                <div class="settings-group voice-settings">
+                    <div class="voice-header">
+                        <h3><i class="bx bx-message-square-detail"></i> Brand Voice</h3>
+                        <button id="save-voice-btn" class="btn btn-icon-small" title="Save brand voice rules"><i class="bx bx-save"></i> Save</button>
+                    </div>
+                    <textarea id="brand-voice-editor" placeholder="Write rules on tone, hook formatting, CTAs, and examples..."></textarea>
+                    <span id="voice-save-status" class="save-status-text"></span>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="theme-toggle-container">
+                    <span>Theme</span>
+                    <button id="theme-toggle-btn" class="theme-btn">
+                        <i class="bx bx-moon moon-icon"></i>
+                        <i class="bx bx-sun sun-icon"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- App Header -->
+            <header class="main-header">
+                <div class="header-info">
+                    <h1>Create Stunning Social Captions</h1>
+                    <p>Enter details or upload an image to generate optimized copy matching your brand voice.</p>
+                </div>
+                <div class="quick-stats">
+                    <button class="btn btn-secondary" id="history-toggle-btn"><i class="bx bx-history"></i> History</button>
+                </div>
+            </header>
+
+            <div class="workspace-grid">
+                <!-- Left Panel: Inputs -->
+                <section class="workspace-card input-panel">
+                    <div class="card-header">
+                        <h2><i class="bx bx-edit-alt"></i> Generator Inputs</h2>
+                    </div>
+                    
+                    <form id="generator-form" class="card-body">
+                        <!-- Product/Photo Description -->
+                        <div class="form-control">
+                            <label for="prompt-desc">Product or Photo Description</label>
+                            <textarea id="prompt-desc" rows="4" placeholder="Describe what you want to promote, your photo elements, or key messages... (e.g. 'A double-walled stainless steel thermal water bottle that keeps drinks cold for 24 hours. Sleek minimalist black design.')"></textarea>
+                        </div>
+
+                        <!-- Keyword Tag Creator -->
+                        <div class="form-control">
+                            <label for="keyword-input">Keywords / Hashtags to Target</label>
+                            <div class="tags-input-container">
+                                <div id="tags-badge-list" class="tags-badge-list"></div>
+                                <input type="text" id="keyword-input" placeholder="Type keyword & press Enter">
+                            </div>
+                        </div>
+
+                        <!-- Image Upload Drag-and-Drop Area -->
+                        <div class="form-control">
+                            <label>Include Reference Image <span class="optional-lbl">(Optional)</span></label>
+                            <div class="drop-zone" id="image-drop-zone">
+                                <div class="drop-zone-prompt">
+                                    <i class="bx bx-cloud-upload upload-icon"></i>
+                                    <p class="drop-prompt-text">Drag & drop your image here or <span class="browse-link">browse</span></p>
+                                    <p class="drop-mime-text">Supports JPG, PNG, WEBP (Max 5MB)</p>
+                                </div>
+                                <input type="file" id="image-upload-file" accept="image/*" class="drop-zone-input">
+                                <div class="image-preview-container hidden" id="image-preview-container">
+                                    <img src="" id="image-preview-img" alt="Uploaded Thumbnail">
+                                    <button type="button" class="btn-remove-preview" id="btn-remove-preview" title="Remove image">
+                                        <i class="bx bx-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CTA Button -->
+                        <button type="submit" class="btn btn-primary btn-generate" id="btn-submit-generate">
+                            <span>🚀 Generate Platform Captions</span>
+                            <div class="spinner hidden" id="btn-spinner"></div>
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Right Panel: Caption Outputs -->
+                <section class="workspace-card output-panel">
+                    <div class="card-header">
+                        <h2><i class="bx bx-check-double"></i> Copy-Ready Captions</h2>
+                        <div class="output-actions">
+                            <button id="copy-all-btn" class="btn btn-secondary btn-small hidden"><i class="bx bx-copy-alt"></i> Copy All</button>
+                            <button id="download-txt-btn" class="btn btn-secondary btn-small hidden"><i class="bx bx-download"></i> Download</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body output-body">
+                        <!-- Welcome message / Placeholder before generation -->
+                        <div class="output-placeholder" id="output-placeholder">
+                            <i class="bx bx-magic-wand placeholder-icon"></i>
+                            <h3>Your Captions Will Appear Here</h3>
+                            <p>Fill out the fields on the left and hit generate to create captions customized for Instagram, Facebook, LinkedIn, and more.</p>
+                        </div>
+
+                        <!-- Generation Loading Screen -->
+                        <div class="generation-loader hidden" id="generation-loader">
+                            <div class="loader-waves">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <h3 id="loader-status-text">AI is reading guidelines...</h3>
+                            <p>Crafting brand-tailored CTAs and formatting tags...</p>
+                        </div>
+
+                        <!-- Caption Outputs Container -->
+                        <div class="captions-results-container hidden" id="captions-results-container">
+                            
+                            <!-- Tab Headers -->
+                            <div class="tabs-nav" id="captions-tabs-nav">
+                                <button class="tab-btn active" data-platform="instagram"><i class="bx bxl-instagram"></i> Instagram</button>
+                                <button class="tab-btn" data-platform="facebook"><i class="bx bxl-facebook-circle"></i> Facebook</button>
+                                <button class="tab-btn" data-platform="linkedin"><i class="bx bxl-linkedin-square"></i> LinkedIn</button>
+                                <button class="tab-btn" data-platform="variation_1"><i class="bx bx-star"></i> Variation 1</button>
+                                <button class="tab-btn" data-platform="variation_2"><i class="bx bx-bulb"></i> Variation 2</button>
+                            </div>
+
+                            <!-- Tab Contents -->
+                            <div class="tabs-content" id="captions-tabs-content">
+                                <!-- Dynamic platform cards loaded by app.js -->
+                                <div class="tab-pane active" id="pane-instagram">
+                                    <div class="caption-card-meta">
+                                        <span class="count-badge" id="char-count-instagram">Characters: 0</span>
+                                        <span class="count-badge" id="hashtag-count-instagram">Hashtags: 0</span>
+                                        <button class="btn btn-icon-small btn-edit-toggle" data-platform="instagram" title="Edit text"><i class="bx bx-edit"></i> Edit</button>
+                                    </div>
+                                    <div class="caption-text-area">
+                                        <textarea id="text-instagram" readonly class="caption-text-output"></textarea>
+                                    </div>
+                                    <button class="btn btn-success copy-single-btn" data-platform="instagram">
+                                        <i class="bx bx-copy"></i> Copy Instagram Caption
+                                    </button>
+                                </div>
+
+                                <div class="tab-pane" id="pane-facebook">
+                                    <div class="caption-card-meta">
+                                        <span class="count-badge" id="char-count-facebook">Characters: 0</span>
+                                        <span class="count-badge" id="hashtag-count-facebook">Hashtags: 0</span>
+                                        <button class="btn btn-icon-small btn-edit-toggle" data-platform="facebook" title="Edit text"><i class="bx bx-edit"></i> Edit</button>
+                                    </div>
+                                    <div class="caption-text-area">
+                                        <textarea id="text-facebook" readonly class="caption-text-output"></textarea>
+                                    </div>
+                                    <button class="btn btn-success copy-single-btn" data-platform="facebook">
+                                        <i class="bx bx-copy"></i> Copy Facebook Caption
+                                    </button>
+                                </div>
+
+                                <div class="tab-pane" id="pane-linkedin">
+                                    <div class="caption-card-meta">
+                                        <span class="count-badge" id="char-count-linkedin">Characters: 0</span>
+                                        <span class="count-badge" id="hashtag-count-linkedin">Hashtags: 0</span>
+                                        <button class="btn btn-icon-small btn-edit-toggle" data-platform="linkedin" title="Edit text"><i class="bx bx-edit"></i> Edit</button>
+                                    </div>
+                                    <div class="caption-text-area">
+                                        <textarea id="text-linkedin" readonly class="caption-text-output"></textarea>
+                                    </div>
+                                    <button class="btn btn-success copy-single-btn" data-platform="linkedin">
+                                        <i class="bx bx-copy"></i> Copy LinkedIn Caption
+                                    </button>
+                                </div>
+
+                                <div class="tab-pane" id="pane-variation_1">
+                                    <div class="caption-card-meta">
+                                        <span class="count-badge" id="char-count-variation_1">Characters: 0</span>
+                                        <span class="count-badge" id="hashtag-count-variation_1">Hashtags: 0</span>
+                                        <button class="btn btn-icon-small btn-edit-toggle" data-platform="variation_1" title="Edit text"><i class="bx bx-edit"></i> Edit</button>
+                                    </div>
+                                    <div class="caption-text-area">
+                                        <textarea id="text-variation_1" readonly class="caption-text-output"></textarea>
+                                    </div>
+                                    <button class="btn btn-success copy-single-btn" data-platform="variation_1">
+                                        <i class="bx bx-copy"></i> Copy Variation 1
+                                    </button>
+                                </div>
+
+                                <div class="tab-pane" id="pane-variation_2">
+                                    <div class="caption-card-meta">
+                                        <span class="count-badge" id="char-count-variation_2">Characters: 0</span>
+                                        <span class="count-badge" id="hashtag-count-variation_2">Hashtags: 0</span>
+                                        <button class="btn btn-icon-small btn-edit-toggle" data-platform="variation_2" title="Edit text"><i class="bx bx-edit"></i> Edit</button>
+                                    </div>
+                                    <div class="caption-text-area">
+                                        <textarea id="text-variation_2" readonly class="caption-text-output"></textarea>
+                                    </div>
+                                    <button class="btn btn-success copy-single-btn" data-platform="variation_2">
+                                        <i class="bx bx-copy"></i> Copy Variation 2
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Slide-out Drawer: Generation History -->
+        <div class="history-drawer-overlay" id="history-overlay"></div>
+        <div class="history-drawer" id="history-drawer">
+            <div class="drawer-header">
+                <h2><i class="bx bx-history"></i> Generation History</h2>
+                <button id="history-close-btn" class="btn btn-close-drawer"><i class="bx bx-x"></i></button>
+            </div>
+            <div class="drawer-body" id="history-list-container">
+                <!-- Populated dynamically by app.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast-notification" class="toast hidden">
+        <i class="bx bx-check-circle toast-icon"></i>
+        <span id="toast-message" class="toast-message">Copied to clipboard!</span>
+    </div>
+
+    <!-- Custom Logic Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

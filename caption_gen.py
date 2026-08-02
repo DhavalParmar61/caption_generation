@@ -64,7 +64,8 @@ def load_config(config_path=DEFAULT_CONFIG_PATH):
         "models": {
             "gemini": "gemini-1.5-flash",
             "openai": "gpt-4o-mini",
-            "anthropic": "claude-3-5-sonnet-20240620"
+            "anthropic": "claude-3-5-sonnet-20240620",
+            "omniroute": "deepseek-v4-flash-free"
         }
     }
     
@@ -94,7 +95,8 @@ def get_api_key(provider):
     key_vars = {
         "gemini": "GEMINI_API_KEY",
         "openai": "OPENAI_API_KEY",
-        "anthropic": "ANTHROPIC_API_KEY"
+        "anthropic": "ANTHROPIC_API_KEY",
+        "omniroute": "OMNIROUTE_API_KEY"
     }
     env_var = key_vars.get(provider.lower())
     if not env_var:
@@ -102,8 +104,8 @@ def get_api_key(provider):
     return os.getenv(env_var)
 
 
-def generate_with_gemini(api_key, model_name, prompt, temperature):
-    """Generate content using Google Gemini API."""
+def generate_with_gemini(api_key, model_name, prompt, temperature, image_bytes=None, image_mime=None):
+    """Generate content using Google Gemini API, optionally with image content."""
     try:
         import google.generativeai as genai
     except ImportError:
@@ -111,8 +113,16 @@ def generate_with_gemini(api_key, model_name, prompt, temperature):
         
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name=model_name)
+    
+    contents = [prompt]
+    if image_bytes and image_mime:
+        contents.append({
+            "mime_type": image_mime,
+            "data": image_bytes
+        })
+        
     response = model.generate_content(
-        prompt,
+        contents,
         generation_config=genai.types.GenerationConfig(temperature=temperature)
     )
     if not response.text:
@@ -120,17 +130,38 @@ def generate_with_gemini(api_key, model_name, prompt, temperature):
     return response.text
 
 
-def generate_with_openai(api_key, model_name, prompt, temperature):
-    """Generate content using OpenAI API."""
+def generate_with_openai(api_key, model_name, prompt, temperature, image_bytes=None, image_mime=None):
+    """Generate content using OpenAI API, optionally with image content."""
     try:
         from openai import OpenAI
     except ImportError:
         raise ImportError("openai library is not installed. Run 'pip install openai'")
         
+    import base64
     client = OpenAI(api_key=api_key)
+    
+    if image_bytes and image_mime:
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_mime};base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ]
+    else:
+        messages = [{"role": "user", "content": prompt}]
+        
     response = client.chat.completions.create(
         model=model_name,
-        messages=[{"role": "user", "content": prompt}],
+        messages=messages,
         temperature=temperature
     )
     content = response.choices[0].message.content
@@ -139,19 +170,83 @@ def generate_with_openai(api_key, model_name, prompt, temperature):
     return content
 
 
-def generate_with_anthropic(api_key, model_name, prompt, temperature):
-    """Generate content using Anthropic Claude API."""
+def generate_with_omniroute(api_key, model_name, prompt, temperature, image_bytes=None, image_mime=None):
+    """Generate content using the Omniroute OpenAI-compatible endpoint (DeepSeek), optionally with image content."""
+    try:
+        from openai import OpenAI
+    except ImportError:
+        raise ImportError("openai library is not installed. Run 'pip install openai'")
+
+    import base64
+    base_url = os.getenv("OMNIROUTE_BASE_URL", "https://api.omniroute.ai/v1")
+    client = OpenAI(api_key=api_key, base_url=base_url)
+
+    if image_bytes and image_mime:
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_mime};base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ]
+    else:
+        messages = [{"role": "user", "content": prompt}]
+
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        temperature=temperature
+    )
+    content = response.choices[0].message.content
+    if not content:
+        raise ValueError("Received empty response from Omniroute API.")
+    return content
+
+
+def generate_with_anthropic(api_key, model_name, prompt, temperature, image_bytes=None, image_mime=None):
+    """Generate content using Anthropic Claude API, optionally with image content."""
     try:
         from anthropic import Anthropic
     except ImportError:
         raise ImportError("anthropic library is not installed. Run 'pip install anthropic'")
         
+    import base64
     client = Anthropic(api_key=api_key)
+    
+    if image_bytes and image_mime:
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": image_mime,
+                            "data": base64_image
+                        }
+                    }
+                ]
+            }
+        ]
+    else:
+        messages = [{"role": "user", "content": prompt}]
+        
     response = client.messages.create(
         model=model_name,
         max_tokens=2000,
         temperature=temperature,
-        messages=[{"role": "user", "content": prompt}]
+        messages=messages
     )
     content = response.content[0].text
     if not content:
@@ -159,7 +254,7 @@ def generate_with_anthropic(api_key, model_name, prompt, temperature):
     return content
 
 
-def get_llm_response(provider, model_name, prompt, temperature):
+def get_llm_response(provider, model_name, prompt, temperature, image_bytes=None, image_mime=None):
     """Route the generation request to the correct LLM provider client."""
     api_key = get_api_key(provider)
     if not api_key:
@@ -169,13 +264,16 @@ def get_llm_response(provider, model_name, prompt, temperature):
         )
         
     if provider.lower() == "gemini":
-        return generate_with_gemini(api_key, model_name, prompt, temperature)
+        return generate_with_gemini(api_key, model_name, prompt, temperature, image_bytes, image_mime)
     elif provider.lower() == "openai":
-        return generate_with_openai(api_key, model_name, prompt, temperature)
+        return generate_with_openai(api_key, model_name, prompt, temperature, image_bytes, image_mime)
     elif provider.lower() == "anthropic":
-        return generate_with_anthropic(api_key, model_name, prompt, temperature)
+        return generate_with_anthropic(api_key, model_name, prompt, temperature, image_bytes, image_mime)
+    elif provider.lower() == "omniroute":
+        return generate_with_omniroute(api_key, model_name, prompt, temperature, image_bytes, image_mime)
     else:
         raise ValueError(f"Unsupported provider: {provider}")
+
 
 
 def parse_captions(response_text):
@@ -286,7 +384,7 @@ def main():
     parser.add_argument("-d", "--description", help="Product or photo description")
     parser.add_argument("-k", "--keywords", help="Optional comma-separated keywords")
     parser.add_argument("-f", "--file", help="Path to a text file containing the description")
-    parser.add_argument("-p", "--provider", choices=["gemini", "openai", "anthropic"], help="LLM Provider override")
+    parser.add_argument("-p", "--provider", choices=["gemini", "openai", "anthropic", "omniroute"], help="LLM Provider override")
     parser.add_argument("-m", "--model", help="LLM Model name override")
     parser.add_argument("-t", "--temperature", type=float, help="Creativity temperature override")
     parser.add_argument("--voice", help="Path to brand voice guidelines file")
@@ -355,7 +453,7 @@ def main():
         # Provider Override Prompt
         change_provider = Confirm.ask(f"Use default provider [success]'{provider}'[/success] ({model_name})?", default=True)
         if not change_provider:
-            provider = Prompt.ask("Select LLM Provider", choices=["gemini", "openai", "anthropic"], default=provider)
+            provider = Prompt.ask("Select LLM Provider", choices=["gemini", "openai", "anthropic", "omniroute"], default=provider)
             model_name = config["models"].get(provider)
             console.print(f"[info]Switched to provider: {provider} ({model_name})[/info]")
             
