@@ -1,8 +1,8 @@
 # 🚀 Social Media Caption Generator
 
-A CLI tool that generates platform-specific social media captions from a product or photo description using Gemini, OpenAI, or Anthropic (Claude) LLM APIs.
+A CLI + web tool that generates platform-specific social media captions from a product or photo description using Omniroute (DeepSeek), Gemini, OpenAI, or Anthropic (Claude) LLM APIs.
 
-It produces **five ready-to-use captions** (Instagram, Facebook, LinkedIn, plus two alternate tone/CTA variations) that are customized using a brand voice guide and relevant hashtags. The output is styled with rich terminal panels for visual clarity.
+It produces ready-to-use captions (Instagram, Facebook, LinkedIn, plus two alternate tone/CTA variations) for whichever platforms you select, customized using a brand voice guide and relevant hashtags. The CLI output is styled with rich terminal panels for visual clarity.
 
 ---
 
@@ -12,7 +12,9 @@ It produces **five ready-to-use captions** (Instagram, Facebook, LinkedIn, plus 
 - **Multi-Provider Support**: Out-of-the-box support for **Google Gemini**, **OpenAI**, and **Anthropic (Claude)**.
 - **Brand Voice Consistency**: Uses a custom `brand_voice.txt` rules file and reference examples to maintain consistent tone, structure, and formatting.
 - **Rich Terminal Output**: Renders beautifully styled panels using color coding for each platform.
-- **Persisted History**: Saves all generated captions and request inputs with timestamps to `history.json` for easy retrieval.
+- **Persisted History**: Saves all generated captions and request inputs with timestamps for easy retrieval.
+- **Platform Selection**: Pick exactly which platforms to generate — via the `--platforms` flag in the CLI or checkboxes in the web UI.
+- **Session-Scoped Web App**: Run the built-in FastAPI web UI with image upload, per-session history, delete/clear history, and a "New Generation" button.
 - **Easy Setup**: Includes double-click automation scripts (`setup.bat` for Windows and `setup.sh` for macOS/Linux).
 
 ---
@@ -119,12 +121,61 @@ You can temporarily override the default provider or temperature via arguments:
 python caption_gen.py -d "Organic lavender soap bar" -p openai -m gpt-4o-mini -t 0.9
 ```
 
+### 5. Choosing Platforms
+By default all five caption types are generated. To limit them, pass `--platforms` (comma-separated: `instagram`, `facebook`, `linkedin`, `variation_1`, `variation_2`) — the interactive wizard also asks which platforms you want:
+```bash
+# Only LinkedIn and the alternate-tone variation
+python caption_gen.py -d "Organic lavender soap bar" --platforms linkedin,variation_1
+```
+
 ---
 
 ## 📜 Generation History
 
-Every successful generation is appended to `history.json` under the project root. This file logs:
+History in the **web app** is kept **only for the current browser session** — it is tied to a per-session id (stored in the tab's `sessionStorage`), not to an email or account. Each session sees its own history, and entries live in memory on the server, so they are lost when the tab is closed or the server restarts. You can delete single entries or clear all of it via the history drawer.
+
+(The CLI tool `caption_gen.py` still optionally writes to the plain `history.json` file, ignored by git.)
+
+Each entry logs:
 - Exact inputs (description, keywords)
 - Model & provider metadata
 - ISO Timestamp
-- Parsed text for all 5 generated variations
+- Parsed text for each selected platform/caption
+
+---
+
+## 🌐 Running the Web App
+
+Launch the browser UI (recommended for sharing with others):
+
+```bash
+python app.py
+```
+
+Then open `http://127.0.0.1:8000`. To bind to a different host/port:
+
+```bash
+# Reachable from your local network (others on the same Wi-Fi)
+set HOST=0.0.0.0
+python app.py
+```
+
+### Image uploads need a vision-capable API key
+Text-only generation works with any configured provider. **Image upload requires a vision model**, so if your active provider only has text models (e.g. a DeepSeek-only Omniroute key), add a key for a vision-capable provider in `.env` — `GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`. When you upload an image, the app automatically uses the first configured vision-capable provider instead of falling back to one that can't see the image.
+
+## 🔗 Sharing with Others via a Public URL
+
+Others must be able to reach your machine, so a tunnel gives them a real URL. The app runs on your PC and the tunnel forwards requests to it.
+
+### Option A: Cloudflare Quick Tunnel (recommended, free, no account needed for ephemeral URL)
+1. Download `cloudflared`: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+2. Start the app: `python app.py`
+3. In a second terminal: `cloudflared tunnel --url http://localhost:8000`
+4. Cloudflare prints a URL like `https://random-words.trycloudflare.com` — share that. Each restart gets a new URL; with a free Cloudflare account and `cloudflared tunnel login` you can get a stable named tunnel.
+
+### Option B: ngrok
+1. Install ngrok and run `ngrok config add-authtoken <your-token>` once.
+2. `python app.py`, then `ngrok http 8000`.
+3. Share the `https://...ngrok.io` URL.
+
+> Note: anyone with the URL can use the app and pay for your API keys, so only share with people you trust or add your own access rules.

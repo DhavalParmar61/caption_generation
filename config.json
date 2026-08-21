@@ -7,6 +7,6 @@
     "gemini": "gemini-1.5-flash",
     "openai": "gpt-4o-mini",
     "anthropic": "claude-3-5-sonnet-20240620",
-    "omniroute": "deepseek-v4-flash-free"
+    "omniroute": "oc/deepseek-v4-flash-free"
   }
 }

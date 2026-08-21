@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CaptionGen Pro</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">
+            <span class="brand-badge">CC</span>
+            <span class="brand-name">CaptionGen <b>Pro</b></span>
+        </div>
+        <div class="backend-status" id="backend-status" title="Backend reachable?">
+            <span class="status-dot" id="status-dot"></span>
+            <span class="status-text" id="status-text">checking…</span>
+        </div>
+    </header>
+
+    <section class="detect-banner" id="detect-banner">
+        <div class="detect-icon">🌐</div>
+        <div class="detect-info">
+            <div class="detect-platform" id="detect-platform">General site</div>
+            <div class="detect-tone" id="detect-tone">Auto tone: Friendly</div>
+        </div>
+    </section>
+
+    <form id="gen-form" class="gen-form">
+        <div class="field">
+            <label for="desc-input">Product or Photo Description</label>
+            <textarea id="desc-input" rows="3" placeholder="Describe the product, photo, or key message…"></textarea>
+        </div>
+
+        <div class="field">
+            <label for="kw-input">Keywords / Hashtags</label>
+            <input id="kw-input" type="text" placeholder="comma, separated, tags">
+        </div>
+
+        <div class="field-two">
+            <div class="field">
+                <label for="tone-select">Tone</label>
+                <select id="tone-select"></select>
+            </div>
+            <div class="field">
+                <label for="temp-input">Creativity</label>
+                <select id="temp-input">
+                    <option value="0.4">Precise</option>
+                    <option value="0.7" selected>Balanced</option>
+                    <option value="0.9">Creative</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Platforms</label>
+            <div class="chips" id="platform-chips"></div>
+        </div>
+
+        <div class="field">
+            <label>Reference Image <span class="opt">(optional)</span></label>
+            <div class="drop-zone" id="drop-zone">
+                <span class="dz-icon">🖼️</span>
+                <span class="dz-text" id="dz-text">Click to attach (JPG/PNG/WEBP, max 5MB)</span>
+                <input type="file" id="img-input" accept="image/*">
+                <div class="img-preview hidden" id="img-preview">
+                    <img id="img-preview-img" alt="preview">
+                    <button type="button" class="img-remove" id="img-remove">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-generate" id="btn-generate">
+            <span class="btn-label">🚀 Generate Captions</span>
+            <span class="spinner hidden" id="btn-spinner"></span>
+        </button>
+    </form>
+
+    <section class="results hidden" id="results">
+        <div class="results-header">
+            <h3>Captions</h3>
+            <span class="provider-tag" id="provider-tag"></span>
+        </div>
+        <div id="result-list"></div>
+    </section>
+
+    <footer class="app-footer">
+        <span>Backend:</span>
+        <input id="backend-input" type="text" value="http://127.0.0.1:8000">
+        <button type="button" id="backend-save" title="Save backend URL">Save</button>
+    </footer>
+
+    <script src="popup.js"></script>
+</body>
+</html>

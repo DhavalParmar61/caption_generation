@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <title>CaptionGen Pro 🚀 - AI Social Media Caption Generator</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,7 +12,7 @@
     <!-- Boxicons for modern icons -->
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=3">
 </head>
 <body>
     <div class="app-container">
@@ -25,50 +26,14 @@
             </div>
             
             <div class="sidebar-content">
-                <!-- LLM Provider Settings Card -->
+                <!-- Engine Settings Card -->
                 <div class="settings-group">
                     <h3><i class="bx bx-cog"></i> Engine Settings</h3>
                     
                     <div class="form-control">
-                        <label for="provider-select">LLM Provider</label>
-                        <select id="provider-select">
-                            <option value="gemini">Google Gemini</option>
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic (Claude)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-control">
-                        <label for="model-select">Model Override</label>
-                        <select id="model-select">
-                            <!-- Dynamic options populated by app.js -->
-                        </select>
-                    </div>
-
-                    <div class="form-control">
                         <label for="temp-slider">Creativity (Temp): <span id="temp-val">0.7</span></label>
                         <input type="range" id="temp-slider" min="0.0" max="1.0" step="0.1" value="0.7">
                     </div>
-                </div>
-
-                <!-- API Key Status Badge list -->
-                <div class="settings-group">
-                    <h3><i class="bx bx-key"></i> Key Status</h3>
-                    <div class="status-list">
-                        <div class="status-item" id="status-gemini">
-                            <span class="status-label">Gemini API</span>
-                            <span class="status-indicator pending"><i class="bx bx-minus-circle"></i> Checking</span>
-                        </div>
-                        <div class="status-item" id="status-openai">
-                            <span class="status-label">OpenAI API</span>
-                            <span class="status-indicator pending"><i class="bx bx-minus-circle"></i> Checking</span>
-                        </div>
-                        <div class="status-item" id="status-anthropic">
-                            <span class="status-label">Anthropic API</span>
-                            <span class="status-indicator pending"><i class="bx bx-minus-circle"></i> Checking</span>
-                        </div>
-                    </div>
-                    <p class="status-tip">Configure these keys in your local <code>.env</code> file.</p>
                 </div>
 
                 <!-- Brand Voice Editor Card -->
@@ -98,10 +63,11 @@
             <!-- App Header -->
             <header class="main-header">
                 <div class="header-info">
-                    <h1>Create Stunning Social Captions</h1>
-                    <p>Enter details or upload an image to generate optimized copy matching your brand voice.</p>
+                    <h1>Turn any idea into <span class="gradient-text">scroll-stopping captions</span></h1>
+                    <p>Describe your product or drop in an image — get five ready-to-post captions tuned to your brand voice.</p>
                 </div>
                 <div class="quick-stats">
+                    <button class="btn btn-secondary" id="new-gen-btn" title="Save current captions and start fresh"><i class="bx bx-plus-circle"></i> New Generation</button>
                     <button class="btn btn-secondary" id="history-toggle-btn"><i class="bx bx-history"></i> History</button>
                 </div>
             </header>
@@ -129,6 +95,34 @@
                             </div>
                         </div>
 
+                        <!-- Platform Selection -->
+                        <div class="form-control">
+                            <label>Platforms to Generate</label>
+                            <div class="platform-grid">
+                                <label class="platform-option">
+                                    <input type="checkbox" class="platform-check" value="instagram" checked>
+                                    <i class="bx bxl-instagram"></i> Instagram
+                                </label>
+                                <label class="platform-option">
+                                    <input type="checkbox" class="platform-check" value="facebook" checked>
+                                    <i class="bx bxl-facebook-circle"></i> Facebook
+                                </label>
+                                <label class="platform-option">
+                                    <input type="checkbox" class="platform-check" value="linkedin" checked>
+                                    <i class="bx bxl-linkedin-square"></i> LinkedIn
+                                </label>
+                                <label class="platform-option">
+                                    <input type="checkbox" class="platform-check" value="variation_1" checked>
+                                    <i class="bx bx-star"></i> Variation 1
+                                </label>
+                                <label class="platform-option">
+                                    <input type="checkbox" class="platform-check" value="variation_2" checked>
+                                    <i class="bx bx-bulb"></i> Variation 2
+                                </label>
+                            </div>
+                            <p class="platform-hint">Uncheck platforms you don't need — only the selected ones will be generated.</p>
+                        </div>
+
                         <!-- Image Upload Drag-and-Drop Area -->
                         <div class="form-control">
                             <label>Include Reference Image <span class="optional-lbl">(Optional)</span></label>
@@ -150,7 +144,7 @@
 
                         <!-- CTA Button -->
                         <button type="submit" class="btn btn-primary btn-generate" id="btn-submit-generate">
-                            <span>🚀 Generate Platform Captions</span>
+                            <span>🚀 Generate My Captions</span>
                             <div class="spinner hidden" id="btn-spinner"></div>
                         </button>
                     </form>
@@ -170,8 +164,8 @@
                         <!-- Welcome message / Placeholder before generation -->
                         <div class="output-placeholder" id="output-placeholder">
                             <i class="bx bx-magic-wand placeholder-icon"></i>
-                            <h3>Your Captions Will Appear Here</h3>
-                            <p>Fill out the fields on the left and hit generate to create captions customized for Instagram, Facebook, LinkedIn, and more.</p>
+                            <h3>Your captions will shine here ✨</h3>
+                            <p>Fill in a description, add keywords, or drop an image, then hit <strong>Generate</strong> for Instagram, Facebook, LinkedIn &amp; two bonus variations.</p>
                         </div>
 
                         <!-- Generation Loading Screen -->
@@ -281,7 +275,10 @@
         <div class="history-drawer" id="history-drawer">
             <div class="drawer-header">
                 <h2><i class="bx bx-history"></i> Generation History</h2>
-                <button id="history-close-btn" class="btn btn-close-drawer"><i class="bx bx-x"></i></button>
+                <div class="drawer-actions">
+                    <button id="history-clear-btn" class="btn btn-icon-small btn-danger" title="Delete all of your history"><i class="bx bx-trash"></i> Clear All</button>
+                    <button id="history-close-btn" class="btn btn-close-drawer"><i class="bx bx-x"></i></button>
+                </div>
             </div>
             <div class="drawer-body" id="history-list-container">
                 <!-- Populated dynamically by app.js -->
@@ -296,6 +293,6 @@
     </div>
 
     <!-- Custom Logic Script -->
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=4"></script>
 </body>
 </html>

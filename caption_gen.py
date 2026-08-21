@@ -7,6 +7,8 @@ Generates platform-specific social media captions using Gemini, OpenAI, or Claud
 import os
 import sys
 import json
+import uuid
+import time
 import argparse
 from datetime import datetime
 from dotenv import load_dotenv
@@ -45,13 +47,64 @@ custom_theme = Theme({
     "instagram": "bold #C13584",
     "facebook": "bold #1877F2",
     "linkedin": "bold #0077B5",
-    "variation": "bold #FF5722",
+    "twitter": "bold #1DA1F2",
+    "youtube": "bold #FF0000",
 })
 console = Console(theme=custom_theme)
 
 DEFAULT_CONFIG_PATH = "config.json"
 DEFAULT_BRAND_VOICE_PATH = "brand_voice.txt"
 DEFAULT_HISTORY_PATH = "history.json"
+
+# Ordered platform definitions: platform id -> (header marker, section instruction)
+PLATFORM_SPECS = {
+    "instagram": ("INSTAGRAM", "Your Instagram caption here, including 3-5 relevant hashtags"),
+    "facebook": ("FACEBOOK", "Your Facebook caption here, including 3-5 relevant hashtags"),
+    "linkedin": ("LINKEDIN", "Your LinkedIn caption here, including 3-5 relevant hashtags"),
+    "twitter": (
+        "X / TWITTER",
+        "Your X/Twitter post here — short, punchy, and conversational, with 1-3 relevant hashtags",
+    ),
+    "youtube": (
+        "YOUTUBE",
+        "Your YouTube video description here — start with a strong hook line, then 2-3 sentences, "
+        "timestamps/links if relevant, and 3-5 hashtags",
+    ),
+}
+
+# Platform id -> (rich border style, panel title) for CLI output
+PLATFORM_PANELS = {
+    "instagram": ("instagram", "📸 Instagram Caption"),
+    "facebook": ("facebook", "👥 Facebook Caption"),
+    "linkedin": ("linkedin", "💼 LinkedIn Caption"),
+    "twitter": ("twitter", "🐦 Twitter Caption"),
+    "youtube": ("youtube", "▶️ YouTube Caption"),
+}
+
+
+def resolve_platforms(platforms_raw=None):
+    """Return a validated list of platform ids from a comma-separated string.
+    Unknown entries are ignored; defaults to all platforms when nothing valid is given."""
+    selected = []
+    if platforms_raw:
+        for p in str(platforms_raw).split(","):
+            p = p.strip().lower()
+            if p in PLATFORM_SPECS and p not in selected:
+                selected.append(p)
+    return selected or list(PLATFORM_SPECS)
+
+
+def build_platform_sections(platforms):
+    """Build the prompt section markers/instructions for the given platforms."""
+    return "\n\n".join(
+        f"---{PLATFORM_SPECS[p][0]}---\n[{PLATFORM_SPECS[p][1]}]"
+        for p in platforms
+    )
+
+
+def filter_captions(captions, platforms):
+    """Keep only the given platforms from a parsed captions dict."""
+    return {p: captions.get(p, "") for p in platforms}
 
 
 def load_config(config_path=DEFAULT_CONFIG_PATH):
@@ -130,6 +183,25 @@ def generate_with_gemini(api_key, model_name, prompt, temperature, image_bytes=N
     return response.text
 
 
+def _openai_chat_with_retry(client, model_name, messages, temperature, max_attempts=3):
+    """Call an OpenAI-compatible chat completions endpoint, retrying transient errors (e.g. rate limits) with backoff."""
+    import openai
+    last_error = None
+    for attempt in range(max_attempts):
+        try:
+            return client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                temperature=temperature
+            )
+        except (openai.RateLimitError, openai.APIConnectionError, openai.APITimeoutError) as e:
+            last_error = e
+            if attempt >= max_attempts - 1:
+                break
+            time.sleep((attempt + 1) * 2)
+    raise last_error
+
+
 def generate_with_openai(api_key, model_name, prompt, temperature, image_bytes=None, image_mime=None):
     """Generate content using OpenAI API, optionally with image content."""
     try:
@@ -159,11 +231,7 @@ def generate_with_openai(api_key, model_name, prompt, temperature, image_bytes=N
     else:
         messages = [{"role": "user", "content": prompt}]
         
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        temperature=temperature
-    )
+    response = _openai_chat_with_retry(client, model_name, messages, temperature)
     content = response.choices[0].message.content
     if not content:
         raise ValueError("Received empty response from OpenAI API.")
@@ -200,11 +268,7 @@ def generate_with_omniroute(api_key, model_name, prompt, temperature, image_byte
     else:
         messages = [{"role": "user", "content": prompt}]
 
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        temperature=temperature
-    )
+    response = _openai_chat_with_retry(client, model_name, messages, temperature)
     content = response.choices[0].message.content
     if not content:
         raise ValueError("Received empty response from Omniroute API.")
@@ -288,8 +352,8 @@ def parse_captions(response_text):
         "instagram": re.compile(r'(?i)(?:---|###|\*\*|\[)\s*instagram\s*(?:---|###|\*\*|\])?|^instagram:$'),
         "facebook": re.compile(r'(?i)(?:---|###|\*\*|\[)\s*facebook\s*(?:---|###|\*\*|\])?|^facebook:$'),
         "linkedin": re.compile(r'(?i)(?:---|###|\*\*|\[)\s*linkedin\s*(?:---|###|\*\*|\])?|^linkedin:$'),
-        "variation_1": re.compile(r'(?i)(?:---|###|\*\*|\[)\s*variation\s*(?:#?\s*1|one)\b|^variation\s*(?:#?\s*1|one):$'),
-        "variation_2": re.compile(r'(?i)(?:---|###|\*\*|\[)\s*variation\s*(?:#?\s*2|two)\b|^variation\s*(?:#?\s*2|two):$'),
+        "twitter": re.compile(r'(?i)(?:---|###|\*\*|\[)\s*(?:x\s*[/|]\s*)?twitter\s*(?:---|###|\*\*|\])?|^twitter:$'),
+        "youtube": re.compile(r'(?i)(?:---|###|\*\*|\[)\s*youtube\s*(?:---|###|\*\*|\])?|^youtube:$'),
     }
     
     parsed = {}
@@ -317,10 +381,10 @@ def parse_captions(response_text):
                 matched_key = "facebook"
             elif "linkedin" in lower_line and ("---" in lower_line or "###" in lower_line or "**" in lower_line or lower_line.startswith("linkedin:")):
                 matched_key = "linkedin"
-            elif "variation" in lower_line and ("1" in lower_line or "one" in lower_line) and ("---" in lower_line or "###" in lower_line or "**" in lower_line or "variation" in lower_line):
-                matched_key = "variation_1"
-            elif "variation" in lower_line and ("2" in lower_line or "two" in lower_line) and ("---" in lower_line or "###" in lower_line or "**" in lower_line or "variation" in lower_line):
-                matched_key = "variation_2"
+            elif ("twitter" in lower_line or "x / twitter" in lower_line) and ("---" in lower_line or "###" in lower_line or "**" in lower_line or lower_line.startswith("twitter:")):
+                matched_key = "twitter"
+            elif "youtube" in lower_line and ("---" in lower_line or "###" in lower_line or "**" in lower_line or lower_line.startswith("youtube:")):
+                matched_key = "youtube"
                 
         if matched_key:
             if current_key:
@@ -345,6 +409,7 @@ def parse_captions(response_text):
 def save_to_history(history_path, description, keywords, provider, model_name, captions):
     """Save the generated captions and inputs to a JSON history file."""
     entry = {
+        "id": str(uuid.uuid4()),
         "timestamp": datetime.now().isoformat(),
         "description": description,
         "keywords": keywords,
@@ -387,6 +452,7 @@ def main():
     parser.add_argument("-p", "--provider", choices=["gemini", "openai", "anthropic", "omniroute"], help="LLM Provider override")
     parser.add_argument("-m", "--model", help="LLM Model name override")
     parser.add_argument("-t", "--temperature", type=float, help="Creativity temperature override")
+    parser.add_argument("--platforms", help="Comma-separated platforms to generate: instagram,facebook,linkedin,variation_1,variation_2 (default: all)")
     parser.add_argument("--voice", help="Path to brand voice guidelines file")
     parser.add_argument("--history", help="Path to history JSON file")
     
@@ -432,6 +498,9 @@ def main():
     # Handle Keywords
     if args.keywords:
         keywords_list = [kw.strip() for kw in args.keywords.split(",") if kw.strip()]
+
+    # Determine which platforms to generate (from args, wizard, or default all)
+    selected_platforms = resolve_platforms(args.platforms)
         
     # If no description provided via arguments, launch the interactive prompt wizard
     is_interactive = not description
@@ -449,14 +518,27 @@ def main():
         keywords_input = Prompt.ask("[bold]Keywords[/bold] (optional, comma-separated)", default="")
         if keywords_input.strip():
             keywords_list = [kw.strip() for kw in keywords_input.split(",") if kw.strip()]
-            
+
+        # Platforms Prompt
+        platforms_input = Prompt.ask(
+            "[bold]Platforms to generate[/bold] (comma-separated: instagram, facebook, linkedin, twitter, youtube)",
+            default="all"
+        )
+        platforms_input = platforms_input.strip().lower()
+        if platforms_input and platforms_input != "all":
+            selected_platforms = resolve_platforms(platforms_input)
+
         # Provider Override Prompt
         change_provider = Confirm.ask(f"Use default provider [success]'{provider}'[/success] ({model_name})?", default=True)
         if not change_provider:
             provider = Prompt.ask("Select LLM Provider", choices=["gemini", "openai", "anthropic", "omniroute"], default=provider)
             model_name = config["models"].get(provider)
             console.print(f"[info]Switched to provider: {provider} ({model_name})[/info]")
-            
+
+    # Default to all platforms if nothing was selected
+    if not selected_platforms:
+        selected_platforms = list(PLATFORM_SPECS)
+
     # Load Brand Voice Guidelines
     if not os.path.exists(brand_voice_path):
         console.print(f"[warning]Warning: Brand voice file not found at '{brand_voice_path}'. Using generic professional voice.[/warning]")
@@ -473,8 +555,12 @@ def main():
     keywords_str = ", ".join(keywords_list) if keywords_list else "None provided"
     
     # Construct LLM Prompt
+    platform_count = len(selected_platforms)
+    platform_sections = build_platform_sections(selected_platforms)
+    count_label = "caption" if platform_count == 1 else "captions"
+
     prompt = f"""You are a professional social media manager and copywriter.
-Your task is to generate five platform-specific captions based on the user's description and guidelines.
+Your task is to generate {platform_count} platform-specific {count_label} based on the user's description and guidelines.
 
 Input Details:
 - Description: {description}
@@ -485,24 +571,11 @@ Brand Voice Guidelines & Reference Examples:
 {brand_voice_guidelines}
 ---
 
-Please generate EXACTLY five captions, formatted with the following headers:
+Please generate EXACTLY {platform_count} {count_label}, formatted with the following headers:
 
----INSTAGRAM---
-[Your Instagram caption here, including 3-5 relevant hashtags]
+{platform_sections}
 
----FACEBOOK---
-[Your Facebook caption here, including 3-5 relevant hashtags]
-
----LINKEDIN---
-[Your LinkedIn caption here, including 3-5 relevant hashtags]
-
----VARIATION 1 (Alternate Tone)---
-[An alternate tone caption, e.g. witty/bold/educational, including relevant hashtags. Specify the tone name at the top of the caption in brackets, e.g. "Tone: Bold"]
-
----VARIATION 2 (Alternate CTA)---
-[An alternate CTA/writing style caption, including relevant hashtags. Specify the variation type at the top of the caption in brackets, e.g. "Variation: Question-based CTA"]
-
-Make sure to follow the brand voice guidelines and reference examples closely. Return ONLY these five sections separated by the markers above. Do not add intro or outro text.
+Make sure to follow the brand voice guidelines and reference examples closely. Return ONLY the sections listed above, separated by the markers. Do not add intro or outro text.
 """
 
     console.print()
@@ -518,68 +591,38 @@ Make sure to follow the brand voice guidelines and reference examples closely. R
             progress.add_task(description="Thinking...", total=None)
             response_text = get_llm_response(provider, model_name, prompt, temperature)
             
-        captions = parse_captions(response_text)
-        
+        captions = filter_captions(parse_captions(response_text), selected_platforms)
+
+        # Fallback when nothing parsed cleanly
+        if all(v.strip() == "" for v in captions.values()):
+            captions[selected_platforms[0]] = response_text
+            console.print("[warning]Warning: Could not parse the response headers. Placed the raw text into the first section.[/warning]")
+
         # Display Generated Captions
         console.print("[success]✓ Captions Generated Successfully![/success]\n")
-        
-        # 1. Instagram Panel
-        console.print(Panel(
-            captions.get("instagram", "[italic red]Failed to generate Instagram caption.[/italic red]"),
-            title="📸 Instagram Caption",
-            title_align="left",
-            border_style="instagram",
-            padding=(1, 2)
-        ))
-        console.print()
-        
-        # 2. Facebook Panel
-        console.print(Panel(
-            captions.get("facebook", "[italic red]Failed to generate Facebook caption.[/italic red]"),
-            title="👥 Facebook Caption",
-            title_align="left",
-            border_style="facebook",
-            padding=(1, 2)
-        ))
-        console.print()
-        
-        # 3. LinkedIn Panel
-        console.print(Panel(
-            captions.get("linkedin", "[italic red]Failed to generate LinkedIn caption.[/italic red]"),
-            title="💼 LinkedIn Caption",
-            title_align="left",
-            border_style="linkedin",
-            padding=(1, 2)
-        ))
-        console.print()
-        
-        # 4. Variation 1 Panel
-        console.print(Panel(
-            captions.get("variation_1", "[italic red]Failed to generate Variation #1.[/italic red]"),
-            title="✨ Variation #1 (Alternate Tone)",
-            title_align="left",
-            border_style="variation",
-            padding=(1, 2)
-        ))
-        console.print()
-        
-        # 5. Variation 2 Panel
-        console.print(Panel(
-            captions.get("variation_2", "[italic red]Failed to generate Variation #2.[/italic red]"),
-            title="💡 Variation #2 (Alternate CTA/Style)",
-            title_align="left",
-            border_style="variation",
-            padding=(1, 2)
-        ))
-        console.print()
-        
+
+        for platform in selected_platforms:
+            border, title = PLATFORM_PANELS[platform]
+            console.print(Panel(
+                captions.get(platform, "[italic red]Failed to generate this caption.[/italic red]"),
+                title=title,
+                title_align="left",
+                border_style=border,
+                padding=(1, 2)
+            ))
+            console.print()
+
         # Save to history file
         saved = save_to_history(history_path, description, keywords_list, provider, model_name, captions)
         if saved:
             console.print(f"[success]✓ Captions saved to history: {history_path}[/success]\n")
             
     except Exception as e:
-        console.print(f"\n[error]Error during generation: {e}[/error]")
+        err_msg = str(e)
+        if "rate_limit" in err_msg.lower() or "429" in err_msg:
+            console.print("\n[warning]The AI provider is currently rate-limited (too many requests in a short time). Please wait a few seconds and try again.[/warning]")
+        else:
+            console.print(f"\n[error]Error during generation: {e}[/error]")
         console.print("[info]Tip: Make sure you have set your API keys correctly in the .env file.[/info]")
         sys.exit(1)
 
