@@ -20,12 +20,10 @@ class TestCaptionGenerator(unittest.TestCase):
             "This is a Facebook caption! #fb\n\n"
             "---LINKEDIN---\n"
             "This is a LinkedIn caption! #li\n\n"
-            "---VARIATION 1 (Alternate Tone)---\n"
-            "Tone: Witty\n"
-            "This is witty! #witty\n\n"
-            "---VARIATION 2 (Alternate CTA)---\n"
-            "Variation: Question\n"
-            "What do you think? #question"
+            "---X / TWITTER---\n"
+            "Short and punchy! #tech\n\n"
+            "---YOUTUBE---\n"
+            "Check out this video! #youtube"
         )
         
         parsed = caption_gen.parse_captions(mock_response)
@@ -33,8 +31,8 @@ class TestCaptionGenerator(unittest.TestCase):
         self.assertEqual(parsed["instagram"], "This is an Instagram caption! #insta")
         self.assertEqual(parsed["facebook"], "This is a Facebook caption! #fb")
         self.assertEqual(parsed["linkedin"], "This is a LinkedIn caption! #li")
-        self.assertEqual(parsed["variation_1"], "Tone: Witty\nThis is witty! #witty")
-        self.assertEqual(parsed["variation_2"], "Variation: Question\nWhat do you think? #question")
+        self.assertEqual(parsed["twitter"], "Short and punchy! #tech")
+        self.assertEqual(parsed["youtube"], "Check out this video! #youtube")
 
     def test_parse_captions_fallback(self):
         """Test parsing when formatting headers have slight differences (e.g. bolded or lowercase)."""
@@ -45,12 +43,10 @@ class TestCaptionGenerator(unittest.TestCase):
             "FB caption here #fb\n\n"
             "### LinkedIn\n"
             "LI caption here #li\n\n"
-            "### Variation 1\n"
-            "Tone: Funny\n"
-            "Funny caption #funny\n\n"
-            "### Variation 2\n"
-            "Variation: Minimal\n"
-            "Minimal caption #minimal"
+            "### X / Twitter\n"
+            "Punchy line #punchy\n\n"
+            "### YouTube\n"
+            "Video description #video"
         )
         
         parsed = caption_gen.parse_captions(mock_response)
@@ -58,8 +54,8 @@ class TestCaptionGenerator(unittest.TestCase):
         self.assertEqual(parsed["instagram"], "Insta caption here #insta")
         self.assertEqual(parsed["facebook"], "FB caption here #fb")
         self.assertEqual(parsed["linkedin"], "LI caption here #li")
-        self.assertEqual(parsed["variation_1"], "Tone: Funny\nFunny caption #funny")
-        self.assertEqual(parsed["variation_2"], "Variation: Minimal\nMinimal caption #minimal")
+        self.assertEqual(parsed["twitter"], "Punchy line #punchy")
+        self.assertEqual(parsed["youtube"], "Video description #video")
 
     def test_load_config_defaults(self):
         """Test config loader returns defaults if file not found."""
@@ -90,8 +86,8 @@ class TestCaptionGenerator(unittest.TestCase):
             "instagram": "Insta",
             "facebook": "FB",
             "linkedin": "LI",
-            "variation_1": "V1",
-            "variation_2": "V2"
+            "twitter": "X",
+            "youtube": "YT"
         }
         
         success = caption_gen.save_to_history(

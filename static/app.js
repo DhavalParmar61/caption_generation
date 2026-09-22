@@ -10,7 +10,7 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel, scope) => Array.from((scope || document).querySelectorAll(sel));
 
-  const PLATFORMS = ["instagram", "facebook", "linkedin", "variation_1", "variation_2"];
+  const PLATFORMS = ["instagram", "facebook", "linkedin", "twitter", "youtube"];
 
   // Platforms currently generated / visible (a subset of PLATFORMS).
   let activePlatforms = PLATFORMS.slice();
@@ -527,8 +527,8 @@
         instagram: "Instagram",
         facebook: "Facebook",
         linkedin: "LinkedIn",
-        variation_1: "Variation 1 (Alternate Tone)",
-        variation_2: "Variation 2 (Alternate CTA)",
+        twitter: "X / Twitter",
+        youtube: "YouTube",
       };
       activePlatforms.forEach((p) => {
         const text = $("#text-" + p).value;
@@ -591,8 +591,8 @@
     instagram: "Instagram",
     facebook: "Facebook",
     linkedin: "LinkedIn",
-    variation_1: "Variation 1",
-    variation_2: "Variation 2",
+    twitter: "X / Twitter",
+    youtube: "YouTube",
   };
 
   function initHistory() {

@@ -28,7 +28,8 @@
     --color-instagram: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7);
     --color-facebook: #1877F2;
     --color-linkedin: #0077B5;
-    --color-variation: #ff5722;
+    --color-twitter: #1DA1F2;
+    --color-youtube: #FF0000;
 
     /* Layout Configs */
     --sidebar-width: 320px;
@@ -994,8 +995,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .tab-btn.active[data-platform="instagram"] { border-color: #ee2a7b; color: #ee2a7b; }
 .tab-btn.active[data-platform="facebook"] { border-color: var(--color-facebook); color: var(--color-facebook); }
 .tab-btn.active[data-platform="linkedin"] { border-color: var(--color-linkedin); color: var(--color-linkedin); }
-.tab-btn.active[data-platform="variation_1"] { border-color: var(--color-variation); color: var(--color-variation); }
-.tab-btn.active[data-platform="variation_2"] { border-color: var(--color-variation); color: var(--color-variation); }
+.tab-btn.active[data-platform="twitter"] { border-color: var(--color-twitter); color: var(--color-twitter); }
+.tab-btn.active[data-platform="youtube"] { border-color: var(--color-youtube); color: var(--color-youtube); }
 
 .tabs-content {
     flex: 1;

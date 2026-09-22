@@ -2,14 +2,14 @@
 
 A CLI + web tool that generates platform-specific social media captions from a product or photo description using Omniroute (DeepSeek), Gemini, OpenAI, or Anthropic (Claude) LLM APIs.
 
-It produces ready-to-use captions (Instagram, Facebook, LinkedIn, plus two alternate tone/CTA variations) for whichever platforms you select, customized using a brand voice guide and relevant hashtags. The CLI output is styled with rich terminal panels for visual clarity.
+It produces ready-to-use captions (Instagram, Facebook, LinkedIn, X/Twitter, and YouTube) for whichever platforms you select, customized using a brand voice guide and relevant hashtags. The CLI output is styled with rich terminal panels for visual clarity.
 
 ---
 
 ## ✨ Features
 
 - **Flexible Inputs**: Pass descriptions and keywords via command-line arguments, read from a text file, or use the guided interactive wizard.
-- **Multi-Provider Support**: Out-of-the-box support for **Google Gemini**, **OpenAI**, and **Anthropic (Claude)**.
+- **Multi-Provider Support**: Out-of-the-box support for **Omniroute (DeepSeek)**, **Google Gemini**, **OpenAI**, and **Anthropic (Claude)**. The web app auto-detects whichever provider has an API key configured — no manual switching needed.
 - **Brand Voice Consistency**: Uses a custom `brand_voice.txt` rules file and reference examples to maintain consistent tone, structure, and formatting.
 - **Rich Terminal Output**: Renders beautifully styled panels using color coding for each platform.
 - **Persisted History**: Saves all generated captions and request inputs with timestamps for easy retrieval.
@@ -28,11 +28,19 @@ caption_generator/
 ├── requirements.txt      # Python package dependencies
 ├── config.json           # Active provider, default models, and configuration settings
 ├── brand_voice.txt       # Brand guidelines and caption examples
-├── caption_gen.py        # Core tool executable script
+├── caption_gen.py        # Core generation library + CLI tool
+├── app.py                # FastAPI backend for the web UI & browser extension
+├── static/               # Web UI (index.html, app.js, styles.css, favicon)
+├── extension/            # Chrome (Manifest V3) browser extension
+├── test_caption_gen.py   # Unit tests (run with `python -m unittest`)
 ├── setup.bat             # Automatic setup script for Windows
 ├── setup.sh              # Automatic setup script for macOS/Linux
 └── README.md             # Documentation
 ```
+
+> `caption_gen.py` is both the CLI entry point and the module the web app imports
+> (`load_config`, `get_llm_response`, `parse_captions`, `resolve_platforms`, etc.),
+> so the CLI and web UI always share the same generation logic.
 
 ---
 
@@ -60,12 +68,15 @@ Make sure you have **Python 3.8 or newer** installed.
 ## ⚙️ Configuration
 
 ### API Keys (`.env`)
-Uncomment and fill in the key for your preferred provider inside the `.env` file:
+Fill in the key for your preferred provider inside the `.env` file:
 ```env
 GEMINI_API_KEY=AIzaSy...
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
+OMNIROUTE_BASE_URL=https://api.omniroute.ai/v1
+OMNIROUTE_API_KEY=...
 ```
+The web app picks the first configured provider in this priority order: `omniroute` → `openai` → `anthropic` → `gemini`.
 
 ### Global Settings (`config.json`)
 You can tweak active models, creativity temperature, or target files:
@@ -78,7 +89,8 @@ You can tweak active models, creativity temperature, or target files:
   "models": {
     "gemini": "gemini-1.5-flash",
     "openai": "gpt-4o-mini",
-    "anthropic": "claude-3-5-sonnet-20240620"
+    "anthropic": "claude-3-5-sonnet-20240620",
+    "omniroute": "oc/deepseek-v4-flash-free"
   }
 }
 ```
@@ -122,10 +134,10 @@ python caption_gen.py -d "Organic lavender soap bar" -p openai -m gpt-4o-mini -t
 ```
 
 ### 5. Choosing Platforms
-By default all five caption types are generated. To limit them, pass `--platforms` (comma-separated: `instagram`, `facebook`, `linkedin`, `variation_1`, `variation_2`) — the interactive wizard also asks which platforms you want:
+By default all five caption types are generated. To limit them, pass `--platforms` (comma-separated: `instagram`, `facebook`, `linkedin`, `twitter`, `youtube`) — the interactive wizard also asks which platforms you want:
 ```bash
-# Only LinkedIn and the alternate-tone variation
-python caption_gen.py -d "Organic lavender soap bar" --platforms linkedin,variation_1
+# Only LinkedIn and X/Twitter
+python caption_gen.py -d "Organic lavender soap bar" --platforms linkedin,twitter
 ```
 
 ---

@@ -452,7 +452,7 @@ def main():
     parser.add_argument("-p", "--provider", choices=["gemini", "openai", "anthropic", "omniroute"], help="LLM Provider override")
     parser.add_argument("-m", "--model", help="LLM Model name override")
     parser.add_argument("-t", "--temperature", type=float, help="Creativity temperature override")
-    parser.add_argument("--platforms", help="Comma-separated platforms to generate: instagram,facebook,linkedin,variation_1,variation_2 (default: all)")
+    parser.add_argument("--platforms", help="Comma-separated platforms to generate: instagram,facebook,linkedin,twitter,youtube (default: all)")
     parser.add_argument("--voice", help="Path to brand voice guidelines file")
     parser.add_argument("--history", help="Path to history JSON file")
     
